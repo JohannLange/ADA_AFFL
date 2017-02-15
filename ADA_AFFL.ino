@@ -97,18 +97,7 @@ double xhat2_prev[2] = {0.0, 0.0}; //Durch den SMO vorangegangene geschaetzte Ge
 
 //REGLER
 //Deklaration
-///Drucke des Regelkreises
-double pdiff = 0; //Differenzdruck zwischen P und p_ziel
-double zdiff = 0; //Differenzdtiefe zwischen z und z_ziel
-double pdiff_sum = 0; //aufsummierter Differenzdruck
-double zdiff_sum = 0; //aufsummierte Differenztiefe
-double palpha = 0; //Stellgroesse des PID-Reglers zur Berechnung des Winkel alpha
-double palpha_max = 50; //Maximalwert der Stellgroesse fuer sinnvolle Auswertung
-///Reglergroessen fuer PID-Regler
-const double Kp = 1; //Proportionale Verstaerkung des PID-Reglers
-const double Ki = 0; //Integrale Verstaerkung des PID-Reglers
-const double Kd = 1000; //Differentiale Verstaerkung des PID-Reglers
-///Reglergroessen fuer (AF)SMC
+///Reglergroessen fuer AFFL
 const double k = 0.0; //Dampening factor
 const double lambda = 0.8;  //SMC performance bandwidth (1, 0.4)
 const double eta = 0.1; //SMC reaching parameter (10, 0.1)
