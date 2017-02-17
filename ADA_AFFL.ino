@@ -1,6 +1,7 @@
 //
-// Firmware for an Autonomous Diving Agent (ADA)
-//
+// Firmware for Autonomous Diving Agent (ADA)
+// ADA stabilizes itself on desired isobar or follows a prescribed depth trajectory
+// Enhanced performance due to Adaptive fuzzy feedback linearization controller
 // In case of any questions feel free to contact johann.lange@tuhh.de
 //
 //Includes
@@ -294,25 +295,25 @@ double berechneAFFL() {
 // Drive motor
 //
 //********************************************************
-// Ein Winkel wird explizit angefahren, solange die Zeit ausreicht
+// Angle is explicitly set as long as enough time is available 
 double step(double alpha) {
   digitalWrite(SLEEP_Pin, HIGH); // ON
   winkel = (double(Schrittzahl) * double(schrittwinkel)) / (double(iplanet) * double(6)) - alpha_max;
-  double dalpha = alpha - winkel; // Winkeldifferenz zum Stellen
-  int n = 6 * (int)abs((dalpha) * iplanet / schrittwinkel); // Anzahl der benoetigten Schritte des Motors
-  int i = 0; // Lokaler Schrittzaehler
-  // Wenn noch genug Zeit in der Loop ist, soll der Motor solange arbeiten, bis die Zeit abgelaufen ist
+  double dalpha = alpha - winkel; // Angle difference for setting( Winkeldifferenz zum Stellen)
+  int n = 6 * (int)abs((dalpha) * iplanet / schrittwinkel); // Number of required motor steps (Anzahl der benoetigten Schritte des Motors)
+  int i = 0; // local stepper counter (Lokaler Schrittzaehler)
+  // If enough time is left within loop, motor continues until time ellapses (Wenn noch genug Zeit in der Loop ist, soll der Motor solange arbeiten, bis die Zeit abgelaufen ist)
   while (looptime < iterationtime - 1) {
-    // Fuer den Fall, dass alpha < -alpha_max soll zusaetzlich mit Hilfe der Endlagen getestet werden, ob die Position stimmt
+    // For the case that alpha < -alpha_max use end positions to check the positions (Fuer den Fall, dass alpha < -alpha_max soll zusaetzlich mit Hilfe der Endlagen getestet werden, ob die Position stimmt)
     if (alpha > -alpha_max) {
       if (dalpha > 0) {
         digitalWrite(DIR_Pin, HIGH);
         while (i <= n && looptime < iterationtime - 1) {
           digitalWrite(STEP_Pin, HIGH);
-          delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+          delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
           digitalWrite(STEP_Pin, LOW);
-          delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
-          ++Schrittzahl; // Schrittzahl um 1 erhoehen (ehemals verringern)
+          delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
+          ++Schrittzahl; // increment step by 1 (Schrittzahl um 1 erhoehen (ehemals verringern))
           ++i;
         }
       }
@@ -320,23 +321,23 @@ double step(double alpha) {
         digitalWrite(DIR_Pin, LOW);
         while (i <= n && looptime < iterationtime - 1) {
           digitalWrite(STEP_Pin, HIGH);
-          delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+          delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
           digitalWrite(STEP_Pin, LOW);
-          delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
-          --Schrittzahl; // Schrittzahl um 1 verringern (ehemals erhoehen)
+          delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
+          --Schrittzahl; // increment step by 1 (Schrittzahl um 1 erhoehen (ehemals verringern))
           ++i;
         }
       }
-      else { // Fuer den Fall, dass dalpha = 0 soll keine Aktion ausgefuehrt werden
+      else { // If alpha = 0 -> no action (Fuer den Fall, dass alpha = 0 soll keine Aktion ausgefuehrt werden)
       }
     }
-    else { //alpha = alpha_max, Endlage wird ueberprueft
+    else { //alpha = alpha_max, check end position (Endlage wird ueberprueft)
       digitalWrite(DIR_Pin, LOW);
-      while (digitalReadFast(Endlagen_Pin) == HIGH && looptime < iterationtime - 1) { // Endlage noch nicht erreicht
+      while (digitalReadFast(Endlagen_Pin) == HIGH && looptime < iterationtime - 1) { // end position not reached yet (Endlage noch nicht erreicht)
         digitalWrite(STEP_Pin, HIGH);
-        delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+        delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
         digitalWrite(STEP_Pin, LOW);
-        delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+        delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
         --Schrittzahl;
       }
       if (digitalRead(Endlagen_Pin) == LOW) {
@@ -348,31 +349,43 @@ double step(double alpha) {
   return winkel;
 }
 
-// Die Zahnstange wird gegen den Endlagenschalter gefahren
-// und die Schrittzahl zurueckgesetzt
+// The rack at end position sensor (Die Zahnstange wird gegen den Endlagenschalter gefahren)
+// and the step counter is reseted (und die Schrittzahl zurueckgesetzt)
 int resetPosition() {
   digitalWrite(SLEEP_Pin, HIGH);
   digitalWrite(DIR_Pin, LOW);
   while (digitalReadFast(Endlagen_Pin) == HIGH) {
     digitalWrite(STEP_Pin, HIGH);
-    delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+    delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
     digitalWrite(STEP_Pin, LOW);
-    delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
-    delay(1); // Nach jedem Schritt 1 ms Pause, um langsamer anzufahren und den Endlagenschalter nicht zu beschaedigen
+    delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
+    delay(1); // After each step 1 ms break to avoid damaging the end position sensor (Nach jedem Schritt 1 ms Pause, um langsamer anzufahren und den Endlagenschalter nicht zu beschaedigen)
   }
-  digitalWrite(DIR_Pin, HIGH); // Nulllage anfahren
+  digitalWrite(DIR_Pin, HIGH); // go to zero position (Nulllage anfahren)
   for (int n = 0; n < 4900; ++n) {
     digitalWrite(STEP_Pin, HIGH);
-    delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+    delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
     digitalWrite(STEP_Pin, LOW);
-    delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+    delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
   }
-  return 4900; // Wenn Nulllage erreicht, Schrittzahl auf 4900 setzen
+  return 4900; // Set step counter to 4900 as soon as zero position is reached (Wenn Nulllage erreicht, Schrittzahl auf 4900 setzen)
 }
 
 
 //********************************************************
+// Data is written into an array. As soon as array is full, ADA submerges
 //
+// CAUTION! ALL VALUES ARE SCALED WITH 10 000
+// AND CASTED INTO LONG INTEGERS
+//
+// required memory of long: 4 byte
+// required memory for a data batch: 4*4 byte = 16 byte
+// EEPROM capacity: 2 kilobyte
+// maximum number of data batches: 2048 byte / 16 byte = 128
+// per second: 2
+// Maximum diving duration: 128 / 2 = 64 s
+//
+// GERMAN:
 // Daten werden in ein Array geschrieben. Wenn das Array
 // voll ist, taucht die Tauchzelle wieder auf.
 //
@@ -381,7 +394,7 @@ int resetPosition() {
 //
 // Speicherbedarf von long: 4 byte
 // Speicherbedarf pro Datensatz: 4*4 byte = 16 byte
-// EEPROM-Groesse: 2 kibyte
+// EEPROM-Groesse: 2 kilobyte
 // Maximale Anzahl an Datensaetzen: 2048 byte / 16 byte = 128
 // Wert-Quadrupel pro Sekunde: 2
 // Maximale Tauchlaenge: 128 / 2 = 64 s
@@ -401,22 +414,22 @@ void WritetoArray() {
     ++iArray;
   }
   else {
-    // Daten in den EEPROM schreiben
+    // Write data to EEPROM (Daten in den EEPROM schreiben)
     if (aufEEPROMgeschrieben == false) {
       WritetoEEPROM();
       aufEEPROMgeschrieben = true;
     }
     // iArray = 0;
-    // Auftauchen
+    // submerge (Auftauchen)
     int breakcounter = 0;
     while (Schrittzahl < 9000) {
       ++breakcounter;
       ++Schrittzahl;
       digitalWrite(STEP_Pin, HIGH);
-      delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
+      delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
       digitalWrite(STEP_Pin, LOW);
-      delayMicroseconds(Schrittzeit_halb); // Halbe Schrittzeit warten
-      Serial.println(F("up, up, up you go"));
+      delayMicroseconds(Schrittzeit_halb); // wait for half a step (Halbe Schrittzeit warten)
+      Serial.println(F("up, up, up you go"));  // ;)
       if (breakcounter > 9000) {
         break;
       }
@@ -436,7 +449,7 @@ void WritetoArray() {
 
 //********************************************************
 //
-// Daten werden in den EEPROM geschrieben
+// Write data to EPPROM (Daten werden in den EEPROM geschrieben)
 //
 //********************************************************
 void WritetoEEPROM() {
@@ -456,7 +469,10 @@ void WritetoEEPROM() {
 }
 
 //********************************************************
+// Save depth and angle data to an array in RAM
+// Output via WritetoArray(); Submerge after succesfull write
 //
+// German:
 // Alle Tiefen- und Winkeldaten in ein Array im RAM
 // speichern.
 // Ausgabe erfolgt in WritetoArray(); nach erfolgreichem
@@ -473,7 +489,7 @@ void save(int l) {
 
 //********************************************************
 //
-// Druck wird berechnet
+// Compute pressure
 //
 // Declaration of Copyright
 // Copyright (c) 2009 MEAS Switzerland
@@ -484,7 +500,7 @@ void save(int l) {
 // to work with Teensy 3.1 microcontroller.
 //
 //********************************************************
-// Der Drucksensor wird ausgewertet und daraus der Druck bestimmt
+// Querry pressure sensor and compute pressure
 double berechneDruck() {
   SPI.beginTransaction(settings_PS);
   // delay required in µs: OSR_4096: 9100, OSR_2048: 4600, OSR_1024: 2300, OSR_512: 1200, OSR_256: 700
